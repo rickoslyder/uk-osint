@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UK OSINT Nexus - Open Source Intelligence Tool</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <span>UK OSINT Nexus</span>
+            </div>
+            <nav class="nav-links">
+                <a href="/">Search</a>
+                <a href="#" onclick="document.getElementById('about-modal').style.display='flex'">About</a>
+                <a href="https://github.com/yourusername/uk-osint-nexus" target="_blank">GitHub</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container">
+        <!-- Search Section -->
+        <section class="search-section">
+            <div class="search-box">
+                <input
+                    type="text"
+                    id="search-input"
+                    class="search-input"
+                    placeholder="Search companies, people, vehicles, legal cases, contracts..."
+                    autofocus
+                >
+                <button id="search-btn" class="search-btn">
+                    <span>🔍</span>
+                    Search All
+                </button>
+            </div>
+
+            <div class="search-options">
+                <div class="option-group">
+                    <input type="checkbox" id="opt-companies" checked>
+                    <label for="opt-companies">Companies House</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-vehicles" checked>
+                    <label for="opt-vehicles">MOT History</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-legal" checked>
+                    <label for="opt-legal">BAILII Legal</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-contracts" checked>
+                    <label for="opt-contracts">Contracts Finder</label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Searching across multiple databases...</p>
+        </div>
+
+        <!-- Results Section -->
+        <section id="results-section" class="results-section">
+            <div class="results-header">
+                <h2>Search Results</h2>
+                <div class="results-stats">
+                    <span class="stat-badge">
+                        <strong id="total-results">0</strong> results
+                    </span>
+                    <span class="stat-badge text-muted">
+                        <span id="search-timestamp"></span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="export-buttons" style="margin-bottom: 1rem;">
+                <button class="export-btn" data-format="json">Export JSON</button>
+                <button class="export-btn" data-format="csv">Export CSV</button>
+                <button class="export-btn" data-format="markdown">Export Markdown</button>
+                <button class="export-btn" data-format="html">Export HTML</button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="tabs" id="tabs">
+                <button class="tab active" data-tab="companies">
+                    🏢 Companies
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="officers">
+                    👤 Officers
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="vehicles">
+                    🚗 Vehicles
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="legal">
+                    ⚖️ Legal
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="contracts">
+                    📋 Contracts
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="correlations">
+                    🔗 Correlations
+                    <span class="tab-count">0</span>
+                </button>
+            </div>
+
+            <!-- Tab Contents -->
+            <div id="companies-content" class="tab-content active">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏢</div>
+                    <p>Search to find companies</p>
+                </div>
+            </div>
+
+            <div id="officers-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">👤</div>
+                    <p>Search to find officers/directors</p>
+                </div>
+            </div>
+
+            <div id="vehicles-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🚗</div>
+                    <p>Enter a vehicle registration to search</p>
+                </div>
+            </div>
+
+            <div id="legal-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚖️</div>
+                    <p>Search to find legal cases</p>
+                </div>
+            </div>
+
+            <div id="contracts-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>Search to find government contracts</p>
+                </div>
+            </div>
+
+            <div id="correlations-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🔗</div>
+                    <p>Correlations will appear when results from multiple sources are found</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- About Modal -->
+    <div id="about-modal" class="modal-overlay" style="display: none;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>About UK OSINT Nexus</h2>
+                <button class="modal-close" onclick="document.getElementById('about-modal').style.display='none'">×</button>
+            </div>
+            <div class="modal-body">
+                <p>UK OSINT Nexus is a unified Open Source Intelligence tool that aggregates data from multiple free UK government APIs and databases.</p>
+
+                <h3 style="margin-top: 1.5rem;">Data Sources</h3>
+                <ul style="padding-left: 1.5rem; margin-top: 0.5rem;">
+                    <li><strong>Companies House</strong> - UK company registry</li>
+                    <li><strong>MOT History</strong> - Vehicle test records</li>
+                    <li><strong>BAILII</strong> - Legal case database</li>
+                    <li><strong>Contracts Finder</strong> - Government procurement</li>
+                </ul>
+
+                <h3 style="margin-top: 1.5rem;">Features</h3>
+                <ul style="padding-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Unified search across all sources</li>
+                    <li>Automatic cross-source correlation</li>
+                    <li>Export to JSON, CSV, Markdown, HTML</li>
+                    <li>Entity relationship visualization</li>
+                </ul>
+
+                <p style="margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
+                    Version 0.1.0 | MIT License
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add modal styles -->
+    <style>
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-header h2 {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        .modal-body {
+            padding: 1.5rem;
+        }
+    </style>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
