@@ -79,12 +79,17 @@ class CompaniesHouseClient(BaseAPIClient):
                 for pn in data["previous_company_names"]
             ]
 
+        # Parse address from search results if not in registered_office_address
+        if not address and "address" in data:
+            address = self._parse_address(data["address"])
+
         return Company(
             source=self.source_name,
             company_number=data.get("company_number", ""),
             company_name=data.get("company_name") or data.get("title", ""),
             company_status=data.get("company_status"),
-            company_type=data.get("type"),
+            # Search API uses 'company_type', profile API uses 'type'
+            company_type=data.get("company_type") or data.get("type"),
             date_of_creation=self._parse_date(data.get("date_of_creation")),
             date_of_cessation=self._parse_date(data.get("date_of_cessation")),
             registered_office_address=address,
