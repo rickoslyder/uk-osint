@@ -4,11 +4,16 @@ import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Flag, auto
-from typing import Optional
+from typing import Any, Optional
 
 from ..api.companies_house import CompaniesHouseClient
 from ..api.contracts_finder import ContractsFinderClient
 from ..api.mot_history import MOTHistoryClient
+from ..api.charity_commission import CharityCommissionClient, Charity
+from ..api.fca_register import FCARegisterClient, FCAFirm
+from ..api.dvla_vehicle import DVLAVehicleClient
+from ..api.electoral_commission import ElectoralCommissionClient, PoliticalDonation
+from ..api.police_data import PoliceDataClient, Crime
 from ..models.entities import (
     Company,
     Contract,
@@ -30,12 +35,21 @@ class DataSources(Flag):
     MOT_HISTORY = auto()
     BAILII = auto()
     CONTRACTS_FINDER = auto()
+    CHARITY_COMMISSION = auto()
+    FCA_REGISTER = auto()
+    DVLA_VEHICLE = auto()
+    ELECTORAL_COMMISSION = auto()
+    POLICE_DATA = auto()
 
     # Convenience combinations
-    ALL = COMPANIES_HOUSE | MOT_HISTORY | BAILII | CONTRACTS_FINDER
-    BUSINESS = COMPANIES_HOUSE | CONTRACTS_FINDER
+    ALL = (COMPANIES_HOUSE | MOT_HISTORY | BAILII | CONTRACTS_FINDER |
+           CHARITY_COMMISSION | FCA_REGISTER | DVLA_VEHICLE | ELECTORAL_COMMISSION)
+    ALL_WITH_POLICE = ALL | POLICE_DATA
+    BUSINESS = COMPANIES_HOUSE | CONTRACTS_FINDER | CHARITY_COMMISSION | FCA_REGISTER
+    FINANCIAL = FCA_REGISTER | COMPANIES_HOUSE
     LEGAL = BAILII
-    VEHICLES = MOT_HISTORY
+    VEHICLES = MOT_HISTORY | DVLA_VEHICLE
+    POLITICAL = ELECTORAL_COMMISSION
 
 
 @dataclass
@@ -59,6 +73,12 @@ class UnifiedSearchResult:
     vehicles: list[Vehicle] = field(default_factory=list)
     legal_cases: list[LegalCase] = field(default_factory=list)
     contracts: list[Contract] = field(default_factory=list)
+    # New data types
+    charities: list[Any] = field(default_factory=list)  # Charity objects
+    fca_firms: list[Any] = field(default_factory=list)  # FCAFirm objects
+    fca_individuals: list[Any] = field(default_factory=list)  # FCAIndividual objects
+    donations: list[Any] = field(default_factory=list)  # PoliticalDonation objects
+    crimes: list[Any] = field(default_factory=list)  # Crime objects
     errors: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -70,6 +90,11 @@ class UnifiedSearchResult:
             + len(self.vehicles)
             + len(self.legal_cases)
             + len(self.contracts)
+            + len(self.charities)
+            + len(self.fca_firms)
+            + len(self.fca_individuals)
+            + len(self.donations)
+            + len(self.crimes)
         )
 
     @property
@@ -141,23 +166,40 @@ class UnifiedSearch:
         self,
         companies_house_key: Optional[str] = None,
         mot_history_key: Optional[str] = None,
+        charity_commission_key: Optional[str] = None,
+        fca_key: Optional[str] = None,
+        fca_email: Optional[str] = None,
+        dvla_key: Optional[str] = None,
     ):
         """Initialize unified search.
 
         Args:
             companies_house_key: Optional API key for Companies House
             mot_history_key: Optional API key for MOT History
+            charity_commission_key: Optional API key for Charity Commission
+            fca_key: Optional API key for FCA Register
+            fca_email: Optional email for FCA Register
+            dvla_key: Optional API key for DVLA Vehicle Enquiry
         """
         config = get_config()
 
         self._ch_key = companies_house_key or config.companies_house_api_key
         self._mot_key = mot_history_key or config.mot_history_api_key
+        self._charity_key = charity_commission_key or getattr(config, 'charity_commission_api_key', None)
+        self._fca_key = fca_key or getattr(config, 'fca_api_key', None)
+        self._fca_email = fca_email or getattr(config, 'fca_email', None)
+        self._dvla_key = dvla_key or getattr(config, 'dvla_api_key', None)
 
         # Lazy initialization of clients
         self._companies_house: Optional[CompaniesHouseClient] = None
         self._mot_history: Optional[MOTHistoryClient] = None
         self._bailii: Optional[BAILIIScraper] = None
         self._contracts_finder: Optional[ContractsFinderClient] = None
+        self._charity_commission: Optional[CharityCommissionClient] = None
+        self._fca_register: Optional[FCARegisterClient] = None
+        self._dvla_vehicle: Optional[DVLAVehicleClient] = None
+        self._electoral_commission: Optional[ElectoralCommissionClient] = None
+        self._police_data: Optional[PoliceDataClient] = None
 
     def _get_companies_house(self) -> CompaniesHouseClient:
         """Get or create Companies House client."""
@@ -183,16 +225,52 @@ class UnifiedSearch:
             self._contracts_finder = ContractsFinderClient()
         return self._contracts_finder
 
+    def _get_charity_commission(self) -> CharityCommissionClient:
+        """Get or create Charity Commission client."""
+        if self._charity_commission is None:
+            self._charity_commission = CharityCommissionClient(api_key=self._charity_key)
+        return self._charity_commission
+
+    def _get_fca_register(self) -> FCARegisterClient:
+        """Get or create FCA Register client."""
+        if self._fca_register is None:
+            self._fca_register = FCARegisterClient(api_key=self._fca_key, email=self._fca_email)
+        return self._fca_register
+
+    def _get_dvla_vehicle(self) -> DVLAVehicleClient:
+        """Get or create DVLA Vehicle client."""
+        if self._dvla_vehicle is None:
+            self._dvla_vehicle = DVLAVehicleClient(api_key=self._dvla_key)
+        return self._dvla_vehicle
+
+    def _get_electoral_commission(self) -> ElectoralCommissionClient:
+        """Get or create Electoral Commission client."""
+        if self._electoral_commission is None:
+            self._electoral_commission = ElectoralCommissionClient()
+        return self._electoral_commission
+
+    def _get_police_data(self) -> PoliceDataClient:
+        """Get or create Police Data client."""
+        if self._police_data is None:
+            self._police_data = PoliceDataClient()
+        return self._police_data
+
     async def close(self) -> None:
         """Close all clients."""
-        if self._companies_house:
-            await self._companies_house.close()
-        if self._mot_history:
-            await self._mot_history.close()
-        if self._bailii:
-            await self._bailii.close()
-        if self._contracts_finder:
-            await self._contracts_finder.close()
+        clients = [
+            self._companies_house,
+            self._mot_history,
+            self._bailii,
+            self._contracts_finder,
+            self._charity_commission,
+            self._fca_register,
+            self._dvla_vehicle,
+            self._electoral_commission,
+            self._police_data,
+        ]
+        for client in clients:
+            if client:
+                await client.close()
 
     async def search(
         self,
@@ -233,6 +311,26 @@ class UnifiedSearch:
             tasks.append(self._search_contracts_finder(query, options))
             task_names.append("contracts_finder")
 
+        if DataSources.CHARITY_COMMISSION in options.sources:
+            tasks.append(self._search_charity_commission(query, options))
+            task_names.append("charity_commission")
+
+        if DataSources.FCA_REGISTER in options.sources:
+            tasks.append(self._search_fca_register(query, options))
+            task_names.append("fca_register")
+
+        if DataSources.DVLA_VEHICLE in options.sources:
+            tasks.append(self._search_dvla_vehicle(query, options))
+            task_names.append("dvla_vehicle")
+
+        if DataSources.ELECTORAL_COMMISSION in options.sources:
+            tasks.append(self._search_electoral_commission(query, options))
+            task_names.append("electoral_commission")
+
+        if DataSources.POLICE_DATA in options.sources:
+            tasks.append(self._search_police_data(query, options))
+            task_names.append("police_data")
+
         # Execute all searches in parallel
         if tasks:
             try:
@@ -256,6 +354,17 @@ class UnifiedSearch:
                             result.legal_cases.extend(res["legal_cases"])
                         if "contracts" in res:
                             result.contracts.extend(res["contracts"])
+                        # New data types
+                        if "charities" in res:
+                            result.charities.extend(res["charities"])
+                        if "fca_firms" in res:
+                            result.fca_firms.extend(res["fca_firms"])
+                        if "fca_individuals" in res:
+                            result.fca_individuals.extend(res["fca_individuals"])
+                        if "donations" in res:
+                            result.donations.extend(res["donations"])
+                        if "crimes" in res:
+                            result.crimes.extend(res["crimes"])
 
             except asyncio.TimeoutError:
                 result.errors["timeout"] = f"Search timed out after {options.timeout}s"
@@ -358,6 +467,125 @@ class UnifiedSearch:
 
         return results
 
+    async def _search_charity_commission(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search Charity Commission for charities."""
+        client = self._get_charity_commission()
+        results = {"charities": []}
+
+        try:
+            charities = await client.search_charities(
+                query,
+                limit=options.max_results_per_source,
+            )
+            results["charities"] = charities
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_fca_register(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search FCA Register for firms and individuals."""
+        client = self._get_fca_register()
+        results = {"fca_firms": [], "fca_individuals": []}
+
+        try:
+            firms = await client.search_firms(
+                query,
+                limit=options.max_results_per_source,
+            )
+            results["fca_firms"] = firms
+        except Exception as e:
+            results["firm_error"] = str(e)
+
+        # Also search for individuals if enabled
+        if options.include_officers:
+            try:
+                individuals = await client.search_individuals(
+                    query,
+                    limit=options.max_results_per_source,
+                )
+                results["fca_individuals"] = individuals
+            except Exception as e:
+                results["individual_error"] = str(e)
+
+        return results
+
+    async def _search_dvla_vehicle(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search DVLA for vehicle details."""
+        # Only search if query looks like a registration number
+        clean_query = query.replace(" ", "").upper()
+
+        if not (2 <= len(clean_query) <= 8 and clean_query.isalnum()):
+            return {"vehicles": []}
+
+        client = self._get_dvla_vehicle()
+        results = {"vehicles": []}
+
+        try:
+            vehicles = await client.search(clean_query)
+            results["vehicles"] = vehicles
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_electoral_commission(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search Electoral Commission for political donations."""
+        client = self._get_electoral_commission()
+        results = {"donations": []}
+
+        try:
+            donations = await client.search_donations(
+                query,
+                rows=options.max_results_per_source,
+            )
+            results["donations"] = donations
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_police_data(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search Police Data for crimes by postcode."""
+        # Only search if query looks like a UK postcode
+        # UK postcodes: AA9A 9AA, A9A 9AA, A9 9AA, A99 9AA, AA9 9AA, AA99 9AA
+        clean_query = query.replace(" ", "").upper()
+
+        # Basic postcode validation - 5-8 chars, alphanumeric
+        if not (5 <= len(clean_query) <= 8 and clean_query.isalnum()):
+            return {"crimes": []}
+
+        client = self._get_police_data()
+        results = {"crimes": []}
+
+        try:
+            crimes = await client.get_crimes_by_postcode(query)
+            results["crimes"] = crimes
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
     # Convenience methods for targeted searches
 
     async def search_company(self, name_or_number: str) -> UnifiedSearchResult:
@@ -379,7 +607,7 @@ class UnifiedSearch:
     async def search_vehicle(self, registration: str) -> UnifiedSearchResult:
         """Search for a vehicle by registration."""
         options = SearchOptions(
-            sources=DataSources.MOT_HISTORY,
+            sources=DataSources.VEHICLES,  # MOT_HISTORY | DVLA_VEHICLE
             include_officers=False,
         )
         return await self.search(registration, options)
@@ -391,6 +619,38 @@ class UnifiedSearch:
             include_officers=False,
         )
         return await self.search(query, options)
+
+    async def search_charity(self, name: str) -> UnifiedSearchResult:
+        """Search for charities."""
+        options = SearchOptions(
+            sources=DataSources.CHARITY_COMMISSION,
+            include_officers=False,
+        )
+        return await self.search(name, options)
+
+    async def search_financial(self, name: str) -> UnifiedSearchResult:
+        """Search for financial services firms."""
+        options = SearchOptions(
+            sources=DataSources.FINANCIAL,  # FCA_REGISTER | COMPANIES_HOUSE
+            include_officers=True,
+        )
+        return await self.search(name, options)
+
+    async def search_political(self, query: str) -> UnifiedSearchResult:
+        """Search for political donations."""
+        options = SearchOptions(
+            sources=DataSources.POLITICAL,  # ELECTORAL_COMMISSION
+            include_officers=False,
+        )
+        return await self.search(query, options)
+
+    async def search_location(self, postcode: str) -> UnifiedSearchResult:
+        """Search for crime data by postcode."""
+        options = SearchOptions(
+            sources=DataSources.POLICE_DATA,
+            include_officers=False,
+        )
+        return await self.search(postcode, options)
 
     async def __aenter__(self):
         return self

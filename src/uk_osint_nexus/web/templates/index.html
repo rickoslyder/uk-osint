@@ -58,6 +58,26 @@
                     <input type="checkbox" id="opt-contracts" checked>
                     <label for="opt-contracts">Contracts Finder</label>
                 </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-charities" checked>
+                    <label for="opt-charities">Charities</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-fca" checked>
+                    <label for="opt-fca">FCA Register</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-dvla" checked>
+                    <label for="opt-dvla">DVLA</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-electoral" checked>
+                    <label for="opt-electoral">Donations</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-police">
+                    <label for="opt-police">Police (postcode)</label>
+                </div>
             </div>
         </section>
 
@@ -111,6 +131,22 @@
                     📋 Contracts
                     <span class="tab-count">0</span>
                 </button>
+                <button class="tab" data-tab="charities">
+                    🏛️ Charities
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="fca">
+                    💰 FCA
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="donations">
+                    🗳️ Donations
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="crimes">
+                    🚨 Crimes
+                    <span class="tab-count">0</span>
+                </button>
                 <button class="tab" data-tab="correlations">
                     🔗 Correlations
                     <span class="tab-count">0</span>
@@ -153,6 +189,34 @@
                 </div>
             </div>
 
+            <div id="charities-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏛️</div>
+                    <p>Search to find registered charities</p>
+                </div>
+            </div>
+
+            <div id="fca-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">💰</div>
+                    <p>Search to find FCA regulated firms and individuals</p>
+                </div>
+            </div>
+
+            <div id="donations-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🗳️</div>
+                    <p>Search to find political donations</p>
+                </div>
+            </div>
+
+            <div id="crimes-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🚨</div>
+                    <p>Enter a UK postcode to search crime data</p>
+                </div>
+            </div>
+
             <div id="correlations-content" class="tab-content">
                 <div class="empty-state">
                     <div class="empty-state-icon">🔗</div>
@@ -178,6 +242,11 @@
                     <li><strong>MOT History</strong> - Vehicle test records</li>
                     <li><strong>BAILII</strong> - Legal case database</li>
                     <li><strong>Contracts Finder</strong> - Government procurement</li>
+                    <li><strong>Charity Commission</strong> - Registered charities</li>
+                    <li><strong>FCA Register</strong> - Financial services firms</li>
+                    <li><strong>DVLA</strong> - Vehicle enquiry service</li>
+                    <li><strong>Electoral Commission</strong> - Political donations</li>
+                    <li><strong>Police Data</strong> - Street-level crime data</li>
                 </ul>
 
                 <h3 style="margin-top: 1.5rem;">Features</h3>

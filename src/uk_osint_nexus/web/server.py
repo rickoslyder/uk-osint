@@ -85,6 +85,11 @@ async def api_search(
     vehicles: bool = Query(True, description="Search MOT History"),
     legal: bool = Query(True, description="Search BAILII"),
     contracts: bool = Query(True, description="Search Contracts Finder"),
+    charities: bool = Query(True, description="Search Charity Commission"),
+    fca: bool = Query(True, description="Search FCA Register"),
+    dvla: bool = Query(True, description="Search DVLA Vehicle"),
+    electoral: bool = Query(True, description="Search Electoral Commission"),
+    police: bool = Query(False, description="Search Police Data (postcode only)"),
     max_results: int = Query(20, ge=1, le=100, description="Max results per source"),
     correlate: bool = Query(True, description="Find correlations"),
 ):
@@ -99,6 +104,16 @@ async def api_search(
         sources |= DataSources.BAILII
     if contracts:
         sources |= DataSources.CONTRACTS_FINDER
+    if charities:
+        sources |= DataSources.CHARITY_COMMISSION
+    if fca:
+        sources |= DataSources.FCA_REGISTER
+    if dvla:
+        sources |= DataSources.DVLA_VEHICLE
+    if electoral:
+        sources |= DataSources.ELECTORAL_COMMISSION
+    if police:
+        sources |= DataSources.POLICE_DATA
 
     if sources == DataSources.NONE:
         raise HTTPException(status_code=400, detail="At least one data source must be enabled")
@@ -121,6 +136,12 @@ async def api_search(
         "vehicles": [json.loads(json.dumps(v.model_dump(), default=json_serializer)) for v in result.vehicles],
         "legal_cases": [json.loads(json.dumps(l.model_dump(), default=json_serializer)) for l in result.legal_cases],
         "contracts": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.contracts],
+        # New data types
+        "charities": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.charities],
+        "fca_firms": [json.loads(json.dumps(f.model_dump(), default=json_serializer)) for f in result.fca_firms],
+        "fca_individuals": [json.loads(json.dumps(f.model_dump(), default=json_serializer)) for f in result.fca_individuals],
+        "donations": [json.loads(json.dumps(d.model_dump(), default=json_serializer)) for d in result.donations],
+        "crimes": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.crimes],
         "errors": result.errors,
         "correlations": [],
     }

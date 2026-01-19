@@ -16,6 +16,11 @@ class OSINTApp {
             vehicles: document.getElementById('opt-vehicles'),
             legal: document.getElementById('opt-legal'),
             contracts: document.getElementById('opt-contracts'),
+            charities: document.getElementById('opt-charities'),
+            fca: document.getElementById('opt-fca'),
+            dvla: document.getElementById('opt-dvla'),
+            electoral: document.getElementById('opt-electoral'),
+            police: document.getElementById('opt-police'),
         };
 
         // Results elements
@@ -30,6 +35,10 @@ class OSINTApp {
         this.vehiclesContainer = document.getElementById('vehicles-content');
         this.legalContainer = document.getElementById('legal-content');
         this.contractsContainer = document.getElementById('contracts-content');
+        this.charitiesContainer = document.getElementById('charities-content');
+        this.fcaContainer = document.getElementById('fca-content');
+        this.donationsContainer = document.getElementById('donations-content');
+        this.crimesContainer = document.getElementById('crimes-content');
         this.correlationsContainer = document.getElementById('correlations-content');
     }
 
@@ -65,6 +74,11 @@ class OSINTApp {
             vehicles: this.searchOptions.vehicles.checked,
             legal: this.searchOptions.legal.checked,
             contracts: this.searchOptions.contracts.checked,
+            charities: this.searchOptions.charities.checked,
+            fca: this.searchOptions.fca.checked,
+            dvla: this.searchOptions.dvla.checked,
+            electoral: this.searchOptions.electoral.checked,
+            police: this.searchOptions.police.checked,
             max_results: 20,
             correlate: true,
         });
@@ -96,6 +110,10 @@ class OSINTApp {
         this.updateTabCount('vehicles', data.vehicles.length);
         this.updateTabCount('legal', data.legal_cases.length);
         this.updateTabCount('contracts', data.contracts.length);
+        this.updateTabCount('charities', data.charities.length);
+        this.updateTabCount('fca', data.fca_firms.length + data.fca_individuals.length);
+        this.updateTabCount('donations', data.donations.length);
+        this.updateTabCount('crimes', data.crimes.length);
         this.updateTabCount('correlations', data.correlations.length);
 
         // Render each section
@@ -104,6 +122,10 @@ class OSINTApp {
         this.renderVehicles(data.vehicles);
         this.renderLegalCases(data.legal_cases);
         this.renderContracts(data.contracts);
+        this.renderCharities(data.charities);
+        this.renderFCA(data.fca_firms, data.fca_individuals);
+        this.renderDonations(data.donations);
+        this.renderCrimes(data.crimes);
         this.renderCorrelations(data.correlations);
 
         // Update header stats
@@ -130,13 +152,17 @@ class OSINTApp {
     }
 
     activateFirstPopulatedTab(data) {
-        const tabOrder = ['companies', 'officers', 'vehicles', 'legal', 'contracts', 'correlations'];
+        const tabOrder = ['companies', 'officers', 'vehicles', 'legal', 'contracts', 'charities', 'fca', 'donations', 'crimes', 'correlations'];
         const counts = {
             companies: data.companies.length,
             officers: data.officers.length,
             vehicles: data.vehicles.length,
             legal: data.legal_cases.length,
             contracts: data.contracts.length,
+            charities: data.charities.length,
+            fca: data.fca_firms.length + data.fca_individuals.length,
+            donations: data.donations.length,
+            crimes: data.crimes.length,
             correlations: data.correlations.length,
         };
 
@@ -375,6 +401,210 @@ class OSINTApp {
             </table>
         `;
         this.contractsContainer.innerHTML = html;
+    }
+
+    renderCharities(charities) {
+        if (!charities.length) {
+            this.charitiesContainer.innerHTML = this.emptyState('No charities found');
+            return;
+        }
+
+        const html = `
+            <div class="card-grid">
+                ${charities.map(c => this.charityCard(c)).join('')}
+            </div>
+        `;
+        this.charitiesContainer.innerHTML = html;
+    }
+
+    charityCard(charity) {
+        const status = charity.charity_status || 'Unknown';
+        const statusClass = status.toLowerCase() === 'registered' ? 'badge-success' : 'badge-warning';
+
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title truncate">${this.escapeHtml(charity.charity_name)}</div>
+                        <div class="card-subtitle">Charity ${charity.charity_number}</div>
+                    </div>
+                    <span class="badge ${statusClass}">${status}</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-row">
+                        <span class="card-label">Registered</span>
+                        <span class="card-value">${this.formatDate(charity.registration_date)}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Income</span>
+                        <span class="card-value">${this.formatCurrency(charity.income)}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Spending</span>
+                        <span class="card-value">${this.formatCurrency(charity.spending)}</span>
+                    </div>
+                    ${charity.activities ? `
+                    <div class="card-row">
+                        <span class="card-label">Activities</span>
+                        <span class="card-value truncate" style="max-width: 200px">${this.escapeHtml(charity.activities)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    renderFCA(firms, individuals) {
+        const totalCount = firms.length + individuals.length;
+        if (!totalCount) {
+            this.fcaContainer.innerHTML = this.emptyState('No FCA regulated firms or individuals found');
+            return;
+        }
+
+        let html = '';
+
+        if (firms.length) {
+            html += `
+                <h3 style="margin-bottom: 1rem;">Firms (${firms.length})</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>FRN</th>
+                            <th>Status</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${firms.map(f => `
+                            <tr>
+                                <td><strong>${this.escapeHtml(f.firm_name)}</strong></td>
+                                <td>${f.frn || '-'}</td>
+                                <td>
+                                    <span class="badge ${f.status === 'Authorised' ? 'badge-success' : 'badge-warning'}">
+                                        ${f.status || '-'}
+                                    </span>
+                                </td>
+                                <td>${this.escapeHtml(f.firm_type) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        if (individuals.length) {
+            html += `
+                <h3 style="margin: 1.5rem 0 1rem;">Individuals (${individuals.length})</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>IRN</th>
+                            <th>Status</th>
+                            <th>Firm</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${individuals.map(i => `
+                            <tr>
+                                <td><strong>${this.escapeHtml(i.name)}</strong></td>
+                                <td>${i.irn || '-'}</td>
+                                <td>
+                                    <span class="badge ${i.status === 'Active' ? 'badge-success' : 'badge-warning'}">
+                                        ${i.status || '-'}
+                                    </span>
+                                </td>
+                                <td>${this.escapeHtml(i.firm_name) || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        this.fcaContainer.innerHTML = html;
+    }
+
+    renderDonations(donations) {
+        if (!donations.length) {
+            this.donationsContainer.innerHTML = this.emptyState('No political donations found');
+            return;
+        }
+
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Donor</th>
+                        <th>Recipient</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${donations.map(d => `
+                        <tr>
+                            <td class="clickable" onclick="app.searchQuery('${this.escapeHtml(d.donor_name || '')}')">${this.escapeHtml(d.donor_name)}</td>
+                            <td class="clickable" onclick="app.searchQuery('${this.escapeHtml(d.recipient_name || '')}')">${this.escapeHtml(d.recipient_name)}</td>
+                            <td><strong>${this.formatCurrency(d.amount)}</strong></td>
+                            <td>${d.donation_type || '-'}</td>
+                            <td>${this.formatDate(d.received_date || d.accepted_date)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        this.donationsContainer.innerHTML = html;
+    }
+
+    renderCrimes(crimes) {
+        if (!crimes.length) {
+            this.crimesContainer.innerHTML = this.emptyState('No crime data found (try entering a UK postcode)');
+            return;
+        }
+
+        // Group by category
+        const byCategory = {};
+        crimes.forEach(c => {
+            const cat = c.category || 'Unknown';
+            byCategory[cat] = (byCategory[cat] || 0) + 1;
+        });
+
+        const summaryHtml = `
+            <div class="crime-summary" style="margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                ${Object.entries(byCategory).map(([cat, count]) => `
+                    <span class="badge badge-info">${cat.replace(/-/g, ' ')}: ${count}</span>
+                `).join('')}
+            </div>
+        `;
+
+        const tableHtml = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th>Month</th>
+                        <th>Outcome</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${crimes.slice(0, 50).map(c => `
+                        <tr>
+                            <td>${c.category?.replace(/-/g, ' ') || '-'}</td>
+                            <td>${this.escapeHtml(c.street_name) || c.location_name || '-'}</td>
+                            <td>${c.month || '-'}</td>
+                            <td>${c.outcome_status || 'Under investigation'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+            ${crimes.length > 50 ? `<p class="text-muted" style="margin-top: 1rem;">Showing 50 of ${crimes.length} crimes</p>` : ''}
+        `;
+
+        this.crimesContainer.innerHTML = summaryHtml + tableHtml;
     }
 
     renderCorrelations(correlations) {
