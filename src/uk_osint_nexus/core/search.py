@@ -14,6 +14,20 @@ from ..api.fca_register import FCARegisterClient, FCAFirm
 from ..api.dvla_vehicle import DVLAVehicleClient
 from ..api.electoral_commission import ElectoralCommissionClient, PoliticalDonation
 from ..api.police_data import PoliceDataClient, Crime
+
+# New API clients
+from ..api.insolvency_service import InsolvencyServiceClient, InsolvencyRecord
+from ..api.companies_house_extended import (
+    CompaniesHouseExtendedClient,
+    DisqualifiedDirector,
+    PersonWithSignificantControl,
+)
+from ..api.land_registry import LandRegistryClient, PropertyTransaction
+from ..api.uk_sanctions import UKSanctionsClient, SanctionedEntity
+from ..api.food_standards import FoodStandardsClient, FoodEstablishment
+from ..api.gazette import GazetteClient, GazetteNotice
+from ..api.cqc import CQCClient, CQCLocation
+
 from ..models.entities import (
     Company,
     Contract,
@@ -41,15 +55,43 @@ class DataSources(Flag):
     ELECTORAL_COMMISSION = auto()
     POLICE_DATA = auto()
 
-    # Convenience combinations
+    # New data sources
+    INSOLVENCY_SERVICE = auto()
+    DISQUALIFIED_DIRECTORS = auto()
+    PSC_REGISTER = auto()
+    LAND_REGISTRY = auto()
+    UK_SANCTIONS = auto()
+    FOOD_STANDARDS = auto()
+    GAZETTE = auto()
+    CQC = auto()
+
+    # Convenience combinations - original
+    ALL_ORIGINAL = (COMPANIES_HOUSE | MOT_HISTORY | BAILII | CONTRACTS_FINDER |
+                    CHARITY_COMMISSION | FCA_REGISTER | DVLA_VEHICLE | ELECTORAL_COMMISSION)
+    ALL_WITH_POLICE = ALL_ORIGINAL | POLICE_DATA
+
+    # Convenience combinations - with new sources
     ALL = (COMPANIES_HOUSE | MOT_HISTORY | BAILII | CONTRACTS_FINDER |
-           CHARITY_COMMISSION | FCA_REGISTER | DVLA_VEHICLE | ELECTORAL_COMMISSION)
-    ALL_WITH_POLICE = ALL | POLICE_DATA
+           CHARITY_COMMISSION | FCA_REGISTER | DVLA_VEHICLE | ELECTORAL_COMMISSION |
+           INSOLVENCY_SERVICE | LAND_REGISTRY | UK_SANCTIONS | FOOD_STANDARDS |
+           GAZETTE | CQC)
+
+    ALL_EXTENDED = ALL | POLICE_DATA | DISQUALIFIED_DIRECTORS | PSC_REGISTER
+
+    # Domain-specific combinations
     BUSINESS = COMPANIES_HOUSE | CONTRACTS_FINDER | CHARITY_COMMISSION | FCA_REGISTER
-    FINANCIAL = FCA_REGISTER | COMPANIES_HOUSE
-    LEGAL = BAILII
+    BUSINESS_EXTENDED = BUSINESS | DISQUALIFIED_DIRECTORS | PSC_REGISTER | GAZETTE
+    FINANCIAL = FCA_REGISTER | COMPANIES_HOUSE | UK_SANCTIONS
+    LEGAL = BAILII | GAZETTE | INSOLVENCY_SERVICE
     VEHICLES = MOT_HISTORY | DVLA_VEHICLE
     POLITICAL = ELECTORAL_COMMISSION
+    PROPERTY = LAND_REGISTRY
+    HEALTHCARE = CQC | FOOD_STANDARDS
+    REGULATORY = UK_SANCTIONS | INSOLVENCY_SERVICE | DISQUALIFIED_DIRECTORS
+
+    # Person-focused searches
+    PERSON_DUE_DILIGENCE = (COMPANIES_HOUSE | INSOLVENCY_SERVICE | DISQUALIFIED_DIRECTORS |
+                            UK_SANCTIONS | GAZETTE | BAILII)
 
 
 @dataclass
@@ -68,17 +110,31 @@ class UnifiedSearchResult:
 
     query: str
     timestamp: datetime = field(default_factory=datetime.utcnow)
+
+    # Original data types
     companies: list[Company] = field(default_factory=list)
     officers: list[Officer] = field(default_factory=list)
     vehicles: list[Vehicle] = field(default_factory=list)
     legal_cases: list[LegalCase] = field(default_factory=list)
     contracts: list[Contract] = field(default_factory=list)
-    # New data types
+
+    # Added in previous session
     charities: list[Any] = field(default_factory=list)  # Charity objects
     fca_firms: list[Any] = field(default_factory=list)  # FCAFirm objects
     fca_individuals: list[Any] = field(default_factory=list)  # FCAIndividual objects
     donations: list[Any] = field(default_factory=list)  # PoliticalDonation objects
     crimes: list[Any] = field(default_factory=list)  # Crime objects
+
+    # New data types
+    insolvency_records: list[Any] = field(default_factory=list)  # InsolvencyRecord objects
+    disqualified_directors: list[Any] = field(default_factory=list)  # DisqualifiedDirector objects
+    psc_records: list[Any] = field(default_factory=list)  # PersonWithSignificantControl objects
+    property_transactions: list[Any] = field(default_factory=list)  # PropertyTransaction objects
+    sanctioned_entities: list[Any] = field(default_factory=list)  # SanctionedEntity objects
+    food_establishments: list[Any] = field(default_factory=list)  # FoodEstablishment objects
+    gazette_notices: list[Any] = field(default_factory=list)  # GazetteNotice objects
+    cqc_locations: list[Any] = field(default_factory=list)  # CQCLocation objects
+
     errors: dict[str, str] = field(default_factory=dict)
 
     @property
@@ -95,6 +151,14 @@ class UnifiedSearchResult:
             + len(self.fca_individuals)
             + len(self.donations)
             + len(self.crimes)
+            + len(self.insolvency_records)
+            + len(self.disqualified_directors)
+            + len(self.psc_records)
+            + len(self.property_transactions)
+            + len(self.sanctioned_entities)
+            + len(self.food_establishments)
+            + len(self.gazette_notices)
+            + len(self.cqc_locations)
         )
 
     @property
@@ -201,6 +265,17 @@ class UnifiedSearch:
         self._electoral_commission: Optional[ElectoralCommissionClient] = None
         self._police_data: Optional[PoliceDataClient] = None
 
+        # New clients
+        self._insolvency_service: Optional[InsolvencyServiceClient] = None
+        self._companies_house_extended: Optional[CompaniesHouseExtendedClient] = None
+        self._land_registry: Optional[LandRegistryClient] = None
+        self._uk_sanctions: Optional[UKSanctionsClient] = None
+        self._food_standards: Optional[FoodStandardsClient] = None
+        self._gazette: Optional[GazetteClient] = None
+        self._cqc: Optional[CQCClient] = None
+
+    # Original client getters
+
     def _get_companies_house(self) -> CompaniesHouseClient:
         """Get or create Companies House client."""
         if self._companies_house is None:
@@ -255,6 +330,50 @@ class UnifiedSearch:
             self._police_data = PoliceDataClient()
         return self._police_data
 
+    # New client getters
+
+    def _get_insolvency_service(self) -> InsolvencyServiceClient:
+        """Get or create Insolvency Service client."""
+        if self._insolvency_service is None:
+            self._insolvency_service = InsolvencyServiceClient()
+        return self._insolvency_service
+
+    def _get_companies_house_extended(self) -> CompaniesHouseExtendedClient:
+        """Get or create Companies House Extended client."""
+        if self._companies_house_extended is None:
+            self._companies_house_extended = CompaniesHouseExtendedClient(api_key=self._ch_key)
+        return self._companies_house_extended
+
+    def _get_land_registry(self) -> LandRegistryClient:
+        """Get or create Land Registry client."""
+        if self._land_registry is None:
+            self._land_registry = LandRegistryClient()
+        return self._land_registry
+
+    def _get_uk_sanctions(self) -> UKSanctionsClient:
+        """Get or create UK Sanctions client."""
+        if self._uk_sanctions is None:
+            self._uk_sanctions = UKSanctionsClient()
+        return self._uk_sanctions
+
+    def _get_food_standards(self) -> FoodStandardsClient:
+        """Get or create Food Standards client."""
+        if self._food_standards is None:
+            self._food_standards = FoodStandardsClient()
+        return self._food_standards
+
+    def _get_gazette(self) -> GazetteClient:
+        """Get or create Gazette client."""
+        if self._gazette is None:
+            self._gazette = GazetteClient()
+        return self._gazette
+
+    def _get_cqc(self) -> CQCClient:
+        """Get or create CQC client."""
+        if self._cqc is None:
+            self._cqc = CQCClient()
+        return self._cqc
+
     async def close(self) -> None:
         """Close all clients."""
         clients = [
@@ -267,6 +386,14 @@ class UnifiedSearch:
             self._dvla_vehicle,
             self._electoral_commission,
             self._police_data,
+            # New clients
+            self._insolvency_service,
+            self._companies_house_extended,
+            self._land_registry,
+            self._uk_sanctions,
+            self._food_standards,
+            self._gazette,
+            self._cqc,
         ]
         for client in clients:
             if client:
@@ -295,6 +422,7 @@ class UnifiedSearch:
         tasks = []
         task_names = []
 
+        # Original sources
         if DataSources.COMPANIES_HOUSE in options.sources:
             tasks.append(self._search_companies_house(query, options))
             task_names.append("companies_house")
@@ -331,6 +459,39 @@ class UnifiedSearch:
             tasks.append(self._search_police_data(query, options))
             task_names.append("police_data")
 
+        # New sources
+        if DataSources.INSOLVENCY_SERVICE in options.sources:
+            tasks.append(self._search_insolvency_service(query, options))
+            task_names.append("insolvency_service")
+
+        if DataSources.DISQUALIFIED_DIRECTORS in options.sources:
+            tasks.append(self._search_disqualified_directors(query, options))
+            task_names.append("disqualified_directors")
+
+        if DataSources.PSC_REGISTER in options.sources:
+            # PSC search requires a company number, skip for general name queries
+            pass
+
+        if DataSources.LAND_REGISTRY in options.sources:
+            tasks.append(self._search_land_registry(query, options))
+            task_names.append("land_registry")
+
+        if DataSources.UK_SANCTIONS in options.sources:
+            tasks.append(self._search_uk_sanctions(query, options))
+            task_names.append("uk_sanctions")
+
+        if DataSources.FOOD_STANDARDS in options.sources:
+            tasks.append(self._search_food_standards(query, options))
+            task_names.append("food_standards")
+
+        if DataSources.GAZETTE in options.sources:
+            tasks.append(self._search_gazette(query, options))
+            task_names.append("gazette")
+
+        if DataSources.CQC in options.sources:
+            tasks.append(self._search_cqc(query, options))
+            task_names.append("cqc")
+
         # Execute all searches in parallel
         if tasks:
             try:
@@ -344,6 +505,7 @@ class UnifiedSearch:
                     if isinstance(res, Exception):
                         result.errors[name] = str(res)
                     elif isinstance(res, dict):
+                        # Original types
                         if "companies" in res:
                             result.companies.extend(res["companies"])
                         if "officers" in res:
@@ -354,7 +516,6 @@ class UnifiedSearch:
                             result.legal_cases.extend(res["legal_cases"])
                         if "contracts" in res:
                             result.contracts.extend(res["contracts"])
-                        # New data types
                         if "charities" in res:
                             result.charities.extend(res["charities"])
                         if "fca_firms" in res:
@@ -365,11 +526,30 @@ class UnifiedSearch:
                             result.donations.extend(res["donations"])
                         if "crimes" in res:
                             result.crimes.extend(res["crimes"])
+                        # New types
+                        if "insolvency_records" in res:
+                            result.insolvency_records.extend(res["insolvency_records"])
+                        if "disqualified_directors" in res:
+                            result.disqualified_directors.extend(res["disqualified_directors"])
+                        if "psc_records" in res:
+                            result.psc_records.extend(res["psc_records"])
+                        if "property_transactions" in res:
+                            result.property_transactions.extend(res["property_transactions"])
+                        if "sanctioned_entities" in res:
+                            result.sanctioned_entities.extend(res["sanctioned_entities"])
+                        if "food_establishments" in res:
+                            result.food_establishments.extend(res["food_establishments"])
+                        if "gazette_notices" in res:
+                            result.gazette_notices.extend(res["gazette_notices"])
+                        if "cqc_locations" in res:
+                            result.cqc_locations.extend(res["cqc_locations"])
 
             except asyncio.TimeoutError:
                 result.errors["timeout"] = f"Search timed out after {options.timeout}s"
 
         return result
+
+    # Original search methods
 
     async def _search_companies_house(
         self,
@@ -568,7 +748,6 @@ class UnifiedSearch:
     ) -> dict:
         """Search Police Data for crimes by postcode."""
         # Only search if query looks like a UK postcode
-        # UK postcodes: AA9A 9AA, A9A 9AA, A9 9AA, A99 9AA, AA9 9AA, AA99 9AA
         clean_query = query.replace(" ", "").upper()
 
         # Basic postcode validation - 5-8 chars, alphanumeric
@@ -586,12 +765,165 @@ class UnifiedSearch:
 
         return results
 
+    # New search methods
+
+    async def _search_insolvency_service(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search Insolvency Service for bankruptcies and IVAs."""
+        client = self._get_insolvency_service()
+        results = {"insolvency_records": []}
+
+        try:
+            # Parse query to try to extract surname and forenames
+            parts = query.strip().split()
+            if len(parts) >= 2:
+                # Assume last part is surname
+                surname = parts[-1]
+                forenames = " ".join(parts[:-1])
+                records = await client.search_by_name(surname, forenames)
+            else:
+                # Single word - use as surname
+                records = await client.search_by_name(query)
+            results["insolvency_records"] = records
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_disqualified_directors(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search for disqualified directors."""
+        client = self._get_companies_house_extended()
+        results = {"disqualified_directors": []}
+
+        try:
+            directors = await client.search_disqualified_officers(
+                query,
+                items_per_page=options.max_results_per_source,
+            )
+            results["disqualified_directors"] = directors
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_land_registry(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search Land Registry for property transactions."""
+        # Only search if query looks like a UK postcode
+        clean_query = query.replace(" ", "").upper()
+
+        # Basic postcode validation
+        if not (5 <= len(clean_query) <= 8 and clean_query.isalnum()):
+            return {"property_transactions": []}
+
+        client = self._get_land_registry()
+        results = {"property_transactions": []}
+
+        try:
+            transactions = await client.search_by_postcode(
+                query,
+                limit=options.max_results_per_source,
+            )
+            results["property_transactions"] = transactions
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_uk_sanctions(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search UK Sanctions list."""
+        client = self._get_uk_sanctions()
+        results = {"sanctioned_entities": []}
+
+        try:
+            entities = await client.search_by_name(query)
+            results["sanctioned_entities"] = entities
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_food_standards(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search Food Standards Agency."""
+        client = self._get_food_standards()
+        results = {"food_establishments": []}
+
+        try:
+            # Try as business name first, then as postcode
+            establishments = await client.search_establishments(
+                name=query,
+                page_size=options.max_results_per_source,
+            )
+            results["food_establishments"] = establishments
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_gazette(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search The Gazette for official notices."""
+        client = self._get_gazette()
+        results = {"gazette_notices": []}
+
+        try:
+            notices = await client.search_notices(
+                query,
+                results_per_page=options.max_results_per_source,
+            )
+            results["gazette_notices"] = notices
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
+    async def _search_cqc(
+        self,
+        query: str,
+        options: SearchOptions,
+    ) -> dict:
+        """Search CQC for care providers."""
+        client = self._get_cqc()
+        results = {"cqc_locations": []}
+
+        try:
+            locations = await client.search_locations(
+                name=query,
+                per_page=options.max_results_per_source,
+            )
+            results["cqc_locations"] = locations
+        except Exception as e:
+            results["error"] = str(e)
+
+        return results
+
     # Convenience methods for targeted searches
 
     async def search_company(self, name_or_number: str) -> UnifiedSearchResult:
         """Search specifically for a company."""
         options = SearchOptions(
-            sources=DataSources.BUSINESS,
+            sources=DataSources.BUSINESS_EXTENDED,
             include_officers=True,
         )
         return await self.search(name_or_number, options)
@@ -599,7 +931,7 @@ class UnifiedSearch:
     async def search_person(self, name: str) -> UnifiedSearchResult:
         """Search for a person across all relevant sources."""
         options = SearchOptions(
-            sources=DataSources.COMPANIES_HOUSE | DataSources.BAILII | DataSources.CONTRACTS_FINDER,
+            sources=DataSources.PERSON_DUE_DILIGENCE,
             include_officers=True,
         )
         return await self.search(name, options)
@@ -613,9 +945,9 @@ class UnifiedSearch:
         return await self.search(registration, options)
 
     async def search_legal(self, query: str) -> UnifiedSearchResult:
-        """Search for legal cases."""
+        """Search for legal cases and insolvency."""
         options = SearchOptions(
-            sources=DataSources.BAILII,
+            sources=DataSources.LEGAL,
             include_officers=False,
         )
         return await self.search(query, options)
@@ -629,9 +961,9 @@ class UnifiedSearch:
         return await self.search(name, options)
 
     async def search_financial(self, name: str) -> UnifiedSearchResult:
-        """Search for financial services firms."""
+        """Search for financial services firms and sanctions."""
         options = SearchOptions(
-            sources=DataSources.FINANCIAL,  # FCA_REGISTER | COMPANIES_HOUSE
+            sources=DataSources.FINANCIAL,
             include_officers=True,
         )
         return await self.search(name, options)
@@ -639,18 +971,51 @@ class UnifiedSearch:
     async def search_political(self, query: str) -> UnifiedSearchResult:
         """Search for political donations."""
         options = SearchOptions(
-            sources=DataSources.POLITICAL,  # ELECTORAL_COMMISSION
+            sources=DataSources.POLITICAL,
             include_officers=False,
         )
         return await self.search(query, options)
 
     async def search_location(self, postcode: str) -> UnifiedSearchResult:
-        """Search for crime data by postcode."""
+        """Search for data by postcode (property, crime, food hygiene, healthcare)."""
         options = SearchOptions(
-            sources=DataSources.POLICE_DATA,
+            sources=DataSources.POLICE_DATA | DataSources.LAND_REGISTRY | DataSources.FOOD_STANDARDS | DataSources.CQC,
             include_officers=False,
         )
         return await self.search(postcode, options)
+
+    async def search_property(self, postcode: str) -> UnifiedSearchResult:
+        """Search for property transactions."""
+        options = SearchOptions(
+            sources=DataSources.PROPERTY,
+            include_officers=False,
+        )
+        return await self.search(postcode, options)
+
+    async def search_healthcare(self, query: str) -> UnifiedSearchResult:
+        """Search for healthcare providers and food establishments."""
+        options = SearchOptions(
+            sources=DataSources.HEALTHCARE,
+            include_officers=False,
+        )
+        return await self.search(query, options)
+
+    async def search_regulatory(self, name: str) -> UnifiedSearchResult:
+        """Search for regulatory records (sanctions, insolvency, disqualifications)."""
+        options = SearchOptions(
+            sources=DataSources.REGULATORY,
+            include_officers=False,
+        )
+        return await self.search(name, options)
+
+    async def due_diligence(self, name: str) -> UnifiedSearchResult:
+        """Comprehensive due diligence search across all sources."""
+        options = SearchOptions(
+            sources=DataSources.ALL_EXTENDED,
+            include_officers=True,
+            timeout=60.0,  # Longer timeout for comprehensive search
+        )
+        return await self.search(name, options)
 
     async def __aenter__(self):
         return self

@@ -90,6 +90,14 @@ async def api_search(
     dvla: bool = Query(True, description="Search DVLA Vehicle"),
     electoral: bool = Query(True, description="Search Electoral Commission"),
     police: bool = Query(False, description="Search Police Data (postcode only)"),
+    # New data sources
+    insolvency: bool = Query(True, description="Search Insolvency Register"),
+    disqualified: bool = Query(True, description="Search Disqualified Directors"),
+    land_registry: bool = Query(False, description="Search Land Registry (postcode only)"),
+    sanctions: bool = Query(True, description="Search UK Sanctions List"),
+    food: bool = Query(False, description="Search Food Hygiene Ratings"),
+    gazette: bool = Query(True, description="Search The Gazette"),
+    cqc: bool = Query(False, description="Search CQC Healthcare"),
     max_results: int = Query(20, ge=1, le=100, description="Max results per source"),
     correlate: bool = Query(True, description="Find correlations"),
 ):
@@ -114,6 +122,21 @@ async def api_search(
         sources |= DataSources.ELECTORAL_COMMISSION
     if police:
         sources |= DataSources.POLICE_DATA
+    # New sources
+    if insolvency:
+        sources |= DataSources.INSOLVENCY_SERVICE
+    if disqualified:
+        sources |= DataSources.DISQUALIFIED_DIRECTORS
+    if land_registry:
+        sources |= DataSources.LAND_REGISTRY
+    if sanctions:
+        sources |= DataSources.UK_SANCTIONS
+    if food:
+        sources |= DataSources.FOOD_STANDARDS
+    if gazette:
+        sources |= DataSources.GAZETTE
+    if cqc:
+        sources |= DataSources.CQC
 
     if sources == DataSources.NONE:
         raise HTTPException(status_code=400, detail="At least one data source must be enabled")
@@ -136,12 +159,20 @@ async def api_search(
         "vehicles": [json.loads(json.dumps(v.model_dump(), default=json_serializer)) for v in result.vehicles],
         "legal_cases": [json.loads(json.dumps(l.model_dump(), default=json_serializer)) for l in result.legal_cases],
         "contracts": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.contracts],
-        # New data types
+        # Previous session data types
         "charities": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.charities],
         "fca_firms": [json.loads(json.dumps(f.model_dump(), default=json_serializer)) for f in result.fca_firms],
         "fca_individuals": [json.loads(json.dumps(f.model_dump(), default=json_serializer)) for f in result.fca_individuals],
         "donations": [json.loads(json.dumps(d.model_dump(), default=json_serializer)) for d in result.donations],
         "crimes": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.crimes],
+        # New data types
+        "insolvency_records": [json.loads(json.dumps(r.model_dump(), default=json_serializer)) for r in result.insolvency_records],
+        "disqualified_directors": [json.loads(json.dumps(d.model_dump(), default=json_serializer)) for d in result.disqualified_directors],
+        "property_transactions": [json.loads(json.dumps(p.model_dump(), default=json_serializer)) for p in result.property_transactions],
+        "sanctioned_entities": [json.loads(json.dumps(s.model_dump(), default=json_serializer)) for s in result.sanctioned_entities],
+        "food_establishments": [json.loads(json.dumps(f.model_dump(), default=json_serializer)) for f in result.food_establishments],
+        "gazette_notices": [json.loads(json.dumps(g.model_dump(), default=json_serializer)) for g in result.gazette_notices],
+        "cqc_locations": [json.loads(json.dumps(c.model_dump(), default=json_serializer)) for c in result.cqc_locations],
         "errors": result.errors,
         "correlations": [],
     }

@@ -42,21 +42,10 @@
             </div>
 
             <div class="search-options">
+                <!-- Business & Corporate -->
                 <div class="option-group">
                     <input type="checkbox" id="opt-companies" checked>
                     <label for="opt-companies">Companies House</label>
-                </div>
-                <div class="option-group">
-                    <input type="checkbox" id="opt-vehicles" checked>
-                    <label for="opt-vehicles">MOT History</label>
-                </div>
-                <div class="option-group">
-                    <input type="checkbox" id="opt-legal" checked>
-                    <label for="opt-legal">BAILII Legal</label>
-                </div>
-                <div class="option-group">
-                    <input type="checkbox" id="opt-contracts" checked>
-                    <label for="opt-contracts">Contracts Finder</label>
                 </div>
                 <div class="option-group">
                     <input type="checkbox" id="opt-charities" checked>
@@ -67,12 +56,56 @@
                     <label for="opt-fca">FCA Register</label>
                 </div>
                 <div class="option-group">
-                    <input type="checkbox" id="opt-dvla" checked>
-                    <label for="opt-dvla">DVLA</label>
+                    <input type="checkbox" id="opt-contracts" checked>
+                    <label for="opt-contracts">Contracts</label>
+                </div>
+                <!-- Due Diligence -->
+                <div class="option-group">
+                    <input type="checkbox" id="opt-insolvency" checked>
+                    <label for="opt-insolvency">Insolvency</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-disqualified" checked>
+                    <label for="opt-disqualified">Disqualified</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-sanctions" checked>
+                    <label for="opt-sanctions">Sanctions</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-gazette" checked>
+                    <label for="opt-gazette">Gazette</label>
+                </div>
+                <!-- Legal & Political -->
+                <div class="option-group">
+                    <input type="checkbox" id="opt-legal" checked>
+                    <label for="opt-legal">BAILII Legal</label>
                 </div>
                 <div class="option-group">
                     <input type="checkbox" id="opt-electoral" checked>
                     <label for="opt-electoral">Donations</label>
+                </div>
+                <!-- Vehicles -->
+                <div class="option-group">
+                    <input type="checkbox" id="opt-vehicles" checked>
+                    <label for="opt-vehicles">MOT History</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-dvla" checked>
+                    <label for="opt-dvla">DVLA</label>
+                </div>
+                <!-- Location-based (postcode) -->
+                <div class="option-group">
+                    <input type="checkbox" id="opt-land-registry">
+                    <label for="opt-land-registry">Property (postcode)</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-food">
+                    <label for="opt-food">Food Hygiene</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="opt-cqc">
+                    <label for="opt-cqc">CQC Healthcare</label>
                 </div>
                 <div class="option-group">
                     <input type="checkbox" id="opt-police">
@@ -119,16 +152,24 @@
                     👤 Officers
                     <span class="tab-count">0</span>
                 </button>
-                <button class="tab" data-tab="vehicles">
-                    🚗 Vehicles
+                <button class="tab" data-tab="insolvency">
+                    📉 Insolvency
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="disqualified">
+                    🚫 Disqualified
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="sanctions">
+                    ⚠️ Sanctions
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="gazette">
+                    📰 Gazette
                     <span class="tab-count">0</span>
                 </button>
                 <button class="tab" data-tab="legal">
                     ⚖️ Legal
-                    <span class="tab-count">0</span>
-                </button>
-                <button class="tab" data-tab="contracts">
-                    📋 Contracts
                     <span class="tab-count">0</span>
                 </button>
                 <button class="tab" data-tab="charities">
@@ -139,8 +180,28 @@
                     💰 FCA
                     <span class="tab-count">0</span>
                 </button>
+                <button class="tab" data-tab="contracts">
+                    📋 Contracts
+                    <span class="tab-count">0</span>
+                </button>
                 <button class="tab" data-tab="donations">
                     🗳️ Donations
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="vehicles">
+                    🚗 Vehicles
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="property">
+                    🏠 Property
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="food">
+                    🍽️ Food
+                    <span class="tab-count">0</span>
+                </button>
+                <button class="tab" data-tab="cqc">
+                    🏥 Healthcare
                     <span class="tab-count">0</span>
                 </button>
                 <button class="tab" data-tab="crimes">
@@ -168,10 +229,31 @@
                 </div>
             </div>
 
-            <div id="vehicles-content" class="tab-content">
+            <div id="insolvency-content" class="tab-content">
                 <div class="empty-state">
-                    <div class="empty-state-icon">🚗</div>
-                    <p>Enter a vehicle registration to search</p>
+                    <div class="empty-state-icon">📉</div>
+                    <p>Search to find bankruptcies, IVAs, and DROs</p>
+                </div>
+            </div>
+
+            <div id="disqualified-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🚫</div>
+                    <p>Search to find disqualified directors</p>
+                </div>
+            </div>
+
+            <div id="sanctions-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">⚠️</div>
+                    <p>Search to find sanctioned individuals and entities</p>
+                </div>
+            </div>
+
+            <div id="gazette-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📰</div>
+                    <p>Search to find official gazette notices</p>
                 </div>
             </div>
 
@@ -179,13 +261,6 @@
                 <div class="empty-state">
                     <div class="empty-state-icon">⚖️</div>
                     <p>Search to find legal cases</p>
-                </div>
-            </div>
-
-            <div id="contracts-content" class="tab-content">
-                <div class="empty-state">
-                    <div class="empty-state-icon">📋</div>
-                    <p>Search to find government contracts</p>
                 </div>
             </div>
 
@@ -203,10 +278,45 @@
                 </div>
             </div>
 
+            <div id="contracts-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📋</div>
+                    <p>Search to find government contracts</p>
+                </div>
+            </div>
+
             <div id="donations-content" class="tab-content">
                 <div class="empty-state">
                     <div class="empty-state-icon">🗳️</div>
                     <p>Search to find political donations</p>
+                </div>
+            </div>
+
+            <div id="vehicles-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🚗</div>
+                    <p>Enter a vehicle registration to search</p>
+                </div>
+            </div>
+
+            <div id="property-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏠</div>
+                    <p>Enter a UK postcode to search property transactions</p>
+                </div>
+            </div>
+
+            <div id="food-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🍽️</div>
+                    <p>Search to find food hygiene ratings</p>
+                </div>
+            </div>
+
+            <div id="cqc-content" class="tab-content">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🏥</div>
+                    <p>Search to find healthcare providers and CQC ratings</p>
                 </div>
             </div>
 
@@ -236,16 +346,23 @@
             <div class="modal-body">
                 <p>UK OSINT Nexus is a unified Open Source Intelligence tool that aggregates data from multiple free UK government APIs and databases.</p>
 
-                <h3 style="margin-top: 1.5rem;">Data Sources</h3>
-                <ul style="padding-left: 1.5rem; margin-top: 0.5rem;">
+                <h3 style="margin-top: 1.5rem;">Data Sources (17)</h3>
+                <ul style="padding-left: 1.5rem; margin-top: 0.5rem; font-size: 0.9rem;">
                     <li><strong>Companies House</strong> - UK company registry</li>
-                    <li><strong>MOT History</strong> - Vehicle test records</li>
-                    <li><strong>BAILII</strong> - Legal case database</li>
-                    <li><strong>Contracts Finder</strong> - Government procurement</li>
                     <li><strong>Charity Commission</strong> - Registered charities</li>
                     <li><strong>FCA Register</strong> - Financial services firms</li>
-                    <li><strong>DVLA</strong> - Vehicle enquiry service</li>
+                    <li><strong>Contracts Finder</strong> - Government procurement</li>
+                    <li><strong>Insolvency Service</strong> - Bankruptcies, IVAs, DROs</li>
+                    <li><strong>Disqualified Directors</strong> - Director disqualifications</li>
+                    <li><strong>UK Sanctions List</strong> - OFSI sanctions</li>
+                    <li><strong>The Gazette</strong> - Official notices</li>
+                    <li><strong>BAILII</strong> - Legal case database</li>
                     <li><strong>Electoral Commission</strong> - Political donations</li>
+                    <li><strong>MOT History</strong> - Vehicle test records</li>
+                    <li><strong>DVLA</strong> - Vehicle enquiry service</li>
+                    <li><strong>Land Registry</strong> - Property transactions</li>
+                    <li><strong>Food Standards Agency</strong> - Food hygiene ratings</li>
+                    <li><strong>CQC</strong> - Healthcare provider ratings</li>
                     <li><strong>Police Data</strong> - Street-level crime data</li>
                 </ul>
 

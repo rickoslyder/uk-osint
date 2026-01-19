@@ -4,22 +4,54 @@ A unified UK Open Source Intelligence (OSINT) tool that aggregates data from mul
 
 ## Features
 
-- **Unified Search**: Query multiple data sources simultaneously
-- **Companies House Integration**: Search UK companies, directors, filing history
-- **MOT History**: Vehicle registration lookups with full MOT test history
-- **BAILII Legal Records**: Search UK court cases and legislation
-- **Contracts Finder**: Government procurement and contract data
+- **Web Interface**: Browser-based UI at [osint.rbnk.uk](https://osint.rbnk.uk)
+- **Unified Search**: Query 17 data sources simultaneously
+- **Due Diligence**: Insolvency, sanctions, disqualified directors, gazette notices
+- **Business Intelligence**: Companies, charities, FCA-regulated firms, government contracts
+- **Legal Research**: Court cases, legislation, official notices
+- **Vehicle Lookups**: MOT history and DVLA vehicle enquiries
+- **Location Data**: Property prices, food hygiene, healthcare ratings, crime data
 - **Cross-Source Correlation**: Automatically link related entities across sources
 - **Multiple Export Formats**: JSON, CSV, Markdown, HTML reports
+- **CLI & Python API**: Full programmatic access
 
-## Data Sources
+## Data Sources (17)
 
+### Business & Corporate
 | Source | Type | API Key Required | Data |
 |--------|------|------------------|------|
-| Companies House | API | Optional* | Companies, directors, filings |
-| MOT History | API | Yes | Vehicle MOT history |
+| Companies House | API | Optional* | Companies, directors, filings, charges, PSCs |
+| Charity Commission | API | No | Registered charities, trustees |
+| FCA Register | API | No | Regulated firms and individuals |
+| Contracts Finder | API | No | Government contracts and procurement |
+
+### Due Diligence & Risk
+| Source | Type | API Key Required | Data |
+|--------|------|------------------|------|
+| Insolvency Service | Scraper | No | Bankruptcies, IVAs, DROs |
+| Disqualified Directors | API | Optional* | Director disqualifications |
+| UK Sanctions List (OFSI) | XML Feed | No | Sanctioned individuals and entities |
+| The Gazette | Atom Feed | No | Official notices (insolvency, company) |
+
+### Legal & Political
+| Source | Type | API Key Required | Data |
+|--------|------|------------------|------|
 | BAILII | Scraper | No | Court cases, legislation |
-| Contracts Finder | API | No | Government contracts |
+| Electoral Commission | API | No | Political donations |
+
+### Vehicles
+| Source | Type | API Key Required | Data |
+|--------|------|------------------|------|
+| MOT History | API | Yes | Vehicle MOT test history |
+| DVLA Vehicle Enquiry | API | Yes | Vehicle details, tax, MOT status |
+
+### Location-Based (Postcode)
+| Source | Type | API Key Required | Data |
+|--------|------|------------------|------|
+| Land Registry | SPARQL | No | Property price paid data |
+| Food Standards Agency | API | No | Food hygiene ratings |
+| CQC | API | No | Healthcare provider ratings |
+| Police Data | API | No | Street-level crime data |
 
 *Companies House works without an API key for basic searches but is rate-limited.
 
@@ -235,18 +267,34 @@ exporter.export_profile(profile, ExportFormat.MARKDOWN, Path("profile.md"))
 ```
 uk-osint-nexus/
 ├── src/uk_osint_nexus/
-│   ├── api/                 # API clients
+│   ├── api/                 # API clients (17 data sources)
 │   │   ├── base.py          # Base client with rate limiting
 │   │   ├── companies_house.py
+│   │   ├── companies_house_extended.py  # Disqualified, PSCs, charges
 │   │   ├── contracts_finder.py
-│   │   └── mot_history.py
+│   │   ├── mot_history.py
+│   │   ├── charity_commission.py
+│   │   ├── fca_register.py
+│   │   ├── dvla_vehicle.py
+│   │   ├── electoral_commission.py
+│   │   ├── police_data.py
+│   │   ├── insolvency_service.py
+│   │   ├── land_registry.py
+│   │   ├── uk_sanctions.py
+│   │   ├── food_standards.py
+│   │   ├── gazette.py
+│   │   └── cqc.py
 │   ├── scrapers/            # Web scrapers
 │   │   └── bailii.py        # BAILII legal database
 │   ├── models/              # Data models
 │   │   └── entities.py      # Pydantic models
 │   ├── core/                # Core functionality
-│   │   ├── search.py        # Unified search
+│   │   ├── search.py        # Unified search engine
 │   │   └── correlator.py    # Entity correlation
+│   ├── web/                 # Web interface
+│   │   ├── server.py        # FastAPI server
+│   │   ├── templates/       # Jinja2 templates
+│   │   └── static/          # CSS, JS assets
 │   ├── cli/                 # CLI interface
 │   │   └── main.py
 │   ├── export/              # Export functionality
@@ -254,6 +302,7 @@ uk-osint-nexus/
 │   └── utils/               # Utilities
 │       └── config.py
 ├── tests/
+├── Dockerfile
 ├── pyproject.toml
 └── README.md
 ```
@@ -279,12 +328,12 @@ The tool respects API rate limits:
 
 ## Future Enhancements
 
-- [ ] Land Registry integration (requires payment)
-- [ ] Electoral roll access (requires commercial API)
 - [ ] Graph visualization of entity networks
 - [ ] Persistent database for caching and history
 - [ ] Alert monitoring for entity changes
-- [ ] Browser-based UI
+- [ ] Electoral roll access (requires commercial API)
+- [x] ~~Land Registry integration~~ (implemented via SPARQL)
+- [x] ~~Browser-based UI~~ (live at osint.rbnk.uk)
 
 ## License
 
@@ -298,5 +347,16 @@ Contributions welcome! Please read CONTRIBUTING.md for guidelines.
 
 - [Companies House API](https://developer.company-information.service.gov.uk/)
 - [DVSA MOT History API](https://dvsa.github.io/mot-history-api-documentation/)
+- [DVLA Vehicle Enquiry Service](https://developer-portal.driver-vehicle-licensing.api.gov.uk/)
 - [BAILII](https://www.bailii.org/)
 - [Contracts Finder](https://www.contractsfinder.service.gov.uk/)
+- [Charity Commission](https://register-of-charities.charitycommission.gov.uk/)
+- [FCA Register](https://register.fca.org.uk/)
+- [Electoral Commission](https://www.electoralcommission.org.uk/)
+- [Insolvency Service](https://www.gov.uk/government/organisations/insolvency-service)
+- [UK Sanctions List (OFSI)](https://www.gov.uk/government/publications/financial-sanctions-consolidated-list-of-targets)
+- [The Gazette](https://www.thegazette.co.uk/)
+- [Land Registry Price Paid Data](https://landregistry.data.gov.uk/)
+- [Food Standards Agency](https://ratings.food.gov.uk/)
+- [Care Quality Commission](https://www.cqc.org.uk/)
+- [Police Data API](https://data.police.uk/)

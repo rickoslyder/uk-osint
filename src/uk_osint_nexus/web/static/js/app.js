@@ -21,6 +21,14 @@ class OSINTApp {
             dvla: document.getElementById('opt-dvla'),
             electoral: document.getElementById('opt-electoral'),
             police: document.getElementById('opt-police'),
+            // New sources
+            insolvency: document.getElementById('opt-insolvency'),
+            disqualified: document.getElementById('opt-disqualified'),
+            landRegistry: document.getElementById('opt-land-registry'),
+            sanctions: document.getElementById('opt-sanctions'),
+            food: document.getElementById('opt-food'),
+            gazette: document.getElementById('opt-gazette'),
+            cqc: document.getElementById('opt-cqc'),
         };
 
         // Results elements
@@ -40,6 +48,14 @@ class OSINTApp {
         this.donationsContainer = document.getElementById('donations-content');
         this.crimesContainer = document.getElementById('crimes-content');
         this.correlationsContainer = document.getElementById('correlations-content');
+        // New containers
+        this.insolvencyContainer = document.getElementById('insolvency-content');
+        this.disqualifiedContainer = document.getElementById('disqualified-content');
+        this.sanctionsContainer = document.getElementById('sanctions-content');
+        this.gazetteContainer = document.getElementById('gazette-content');
+        this.propertyContainer = document.getElementById('property-content');
+        this.foodContainer = document.getElementById('food-content');
+        this.cqcContainer = document.getElementById('cqc-content');
     }
 
     bindEvents() {
@@ -70,15 +86,23 @@ class OSINTApp {
         // Build URL params
         const params = new URLSearchParams({
             q: query,
-            companies: this.searchOptions.companies.checked,
-            vehicles: this.searchOptions.vehicles.checked,
-            legal: this.searchOptions.legal.checked,
-            contracts: this.searchOptions.contracts.checked,
-            charities: this.searchOptions.charities.checked,
-            fca: this.searchOptions.fca.checked,
-            dvla: this.searchOptions.dvla.checked,
-            electoral: this.searchOptions.electoral.checked,
-            police: this.searchOptions.police.checked,
+            companies: this.searchOptions.companies?.checked ?? true,
+            vehicles: this.searchOptions.vehicles?.checked ?? true,
+            legal: this.searchOptions.legal?.checked ?? true,
+            contracts: this.searchOptions.contracts?.checked ?? true,
+            charities: this.searchOptions.charities?.checked ?? true,
+            fca: this.searchOptions.fca?.checked ?? true,
+            dvla: this.searchOptions.dvla?.checked ?? true,
+            electoral: this.searchOptions.electoral?.checked ?? true,
+            police: this.searchOptions.police?.checked ?? false,
+            // New sources
+            insolvency: this.searchOptions.insolvency?.checked ?? true,
+            disqualified: this.searchOptions.disqualified?.checked ?? true,
+            land_registry: this.searchOptions.landRegistry?.checked ?? false,
+            sanctions: this.searchOptions.sanctions?.checked ?? true,
+            food: this.searchOptions.food?.checked ?? false,
+            gazette: this.searchOptions.gazette?.checked ?? true,
+            cqc: this.searchOptions.cqc?.checked ?? false,
             max_results: 20,
             correlate: true,
         });
@@ -115,6 +139,14 @@ class OSINTApp {
         this.updateTabCount('donations', data.donations.length);
         this.updateTabCount('crimes', data.crimes.length);
         this.updateTabCount('correlations', data.correlations.length);
+        // New tabs
+        this.updateTabCount('insolvency', data.insolvency_records?.length || 0);
+        this.updateTabCount('disqualified', data.disqualified_directors?.length || 0);
+        this.updateTabCount('sanctions', data.sanctioned_entities?.length || 0);
+        this.updateTabCount('gazette', data.gazette_notices?.length || 0);
+        this.updateTabCount('property', data.property_transactions?.length || 0);
+        this.updateTabCount('food', data.food_establishments?.length || 0);
+        this.updateTabCount('cqc', data.cqc_locations?.length || 0);
 
         // Render each section
         this.renderCompanies(data.companies);
@@ -127,6 +159,14 @@ class OSINTApp {
         this.renderDonations(data.donations);
         this.renderCrimes(data.crimes);
         this.renderCorrelations(data.correlations);
+        // New renders
+        this.renderInsolvency(data.insolvency_records || []);
+        this.renderDisqualified(data.disqualified_directors || []);
+        this.renderSanctions(data.sanctioned_entities || []);
+        this.renderGazette(data.gazette_notices || []);
+        this.renderProperty(data.property_transactions || []);
+        this.renderFood(data.food_establishments || []);
+        this.renderCQC(data.cqc_locations || []);
 
         // Update header stats
         document.getElementById('total-results').textContent = data.total_results;
@@ -152,7 +192,11 @@ class OSINTApp {
     }
 
     activateFirstPopulatedTab(data) {
-        const tabOrder = ['companies', 'officers', 'vehicles', 'legal', 'contracts', 'charities', 'fca', 'donations', 'crimes', 'correlations'];
+        const tabOrder = [
+            'companies', 'officers', 'insolvency', 'disqualified', 'sanctions', 'gazette',
+            'legal', 'charities', 'fca', 'contracts', 'donations',
+            'vehicles', 'property', 'food', 'cqc', 'crimes', 'correlations'
+        ];
         const counts = {
             companies: data.companies.length,
             officers: data.officers.length,
@@ -164,6 +208,13 @@ class OSINTApp {
             donations: data.donations.length,
             crimes: data.crimes.length,
             correlations: data.correlations.length,
+            insolvency: data.insolvency_records?.length || 0,
+            disqualified: data.disqualified_directors?.length || 0,
+            sanctions: data.sanctioned_entities?.length || 0,
+            gazette: data.gazette_notices?.length || 0,
+            property: data.property_transactions?.length || 0,
+            food: data.food_establishments?.length || 0,
+            cqc: data.cqc_locations?.length || 0,
         };
 
         for (const tab of tabOrder) {
@@ -275,6 +326,282 @@ class OSINTApp {
             </table>
         `;
         this.officersContainer.innerHTML = html;
+    }
+
+    renderInsolvency(records) {
+        if (!records.length) {
+            this.insolvencyContainer.innerHTML = this.emptyState('No insolvency records found');
+            return;
+        }
+
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Court</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${records.map(r => `
+                        <tr>
+                            <td><strong>${this.escapeHtml(r.forenames || '')} ${this.escapeHtml(r.surname)}</strong></td>
+                            <td><span class="badge badge-warning">${r.case_type || '-'}</span></td>
+                            <td>${r.status || '-'}</td>
+                            <td>${this.escapeHtml(r.court) || '-'}</td>
+                            <td>${this.formatDate(r.start_date)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        this.insolvencyContainer.innerHTML = html;
+    }
+
+    renderDisqualified(directors) {
+        if (!directors.length) {
+            this.disqualifiedContainer.innerHTML = this.emptyState('No disqualified directors found');
+            return;
+        }
+
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>From</th>
+                        <th>Until</th>
+                        <th>Reason</th>
+                        <th>Companies</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${directors.map(d => `
+                        <tr>
+                            <td><strong>${this.escapeHtml(d.name)}</strong></td>
+                            <td>${this.formatDate(d.disqualified_from)}</td>
+                            <td>${this.formatDate(d.disqualified_until)}</td>
+                            <td>${this.escapeHtml(d.reason) || '-'}</td>
+                            <td>${(d.company_names || []).slice(0, 2).join(', ') || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        this.disqualifiedContainer.innerHTML = html;
+    }
+
+    renderSanctions(entities) {
+        if (!entities.length) {
+            this.sanctionsContainer.innerHTML = this.emptyState('No sanctioned entities found');
+            return;
+        }
+
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Regime</th>
+                        <th>Nationality</th>
+                        <th>Aliases</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${entities.map(e => `
+                        <tr class="sanctions-row">
+                            <td><strong>${this.escapeHtml(e.name)}</strong></td>
+                            <td><span class="badge badge-danger">${e.entity_type || '-'}</span></td>
+                            <td>${this.escapeHtml(e.regime) || '-'}</td>
+                            <td>${this.escapeHtml(e.nationality) || '-'}</td>
+                            <td>${(e.aliases || []).slice(0, 2).join(', ') || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        this.sanctionsContainer.innerHTML = html;
+    }
+
+    renderGazette(notices) {
+        if (!notices.length) {
+            this.gazetteContainer.innerHTML = this.emptyState('No gazette notices found');
+            return;
+        }
+
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Published</th>
+                        <th>Link</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${notices.map(n => `
+                        <tr>
+                            <td class="truncate" style="max-width: 400px">${this.escapeHtml(n.title)}</td>
+                            <td><span class="badge badge-info">${n.notice_type || '-'}</span></td>
+                            <td>${this.formatDate(n.publication_date)}</td>
+                            <td>
+                                ${n.notice_url
+                                    ? `<a href="${n.notice_url}" target="_blank" class="clickable">View</a>`
+                                    : '-'
+                                }
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        this.gazetteContainer.innerHTML = html;
+    }
+
+    renderProperty(transactions) {
+        if (!transactions.length) {
+            this.propertyContainer.innerHTML = this.emptyState('No property transactions found (try a UK postcode)');
+            return;
+        }
+
+        const html = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Address</th>
+                        <th>Price</th>
+                        <th>Type</th>
+                        <th>Tenure</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${transactions.map(t => `
+                        <tr>
+                            <td class="truncate" style="max-width: 300px">${this.escapeHtml(t.full_address)}</td>
+                            <td><strong>${this.formatCurrency(t.price)}</strong></td>
+                            <td>${t.property_type_name || t.property_type || '-'}</td>
+                            <td>${t.tenure_name || t.tenure || '-'}</td>
+                            <td>${this.formatDate(t.transaction_date)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+        this.propertyContainer.innerHTML = html;
+    }
+
+    renderFood(establishments) {
+        if (!establishments.length) {
+            this.foodContainer.innerHTML = this.emptyState('No food establishments found');
+            return;
+        }
+
+        const html = `
+            <div class="card-grid">
+                ${establishments.map(e => this.foodCard(e)).join('')}
+            </div>
+        `;
+        this.foodContainer.innerHTML = html;
+    }
+
+    foodCard(establishment) {
+        const rating = establishment.rating_value || 'N/A';
+        let ratingClass = 'badge-info';
+        if (rating === '5') ratingClass = 'badge-success';
+        else if (rating === '4') ratingClass = 'badge-success';
+        else if (rating === '3') ratingClass = 'badge-warning';
+        else if (rating === '2' || rating === '1' || rating === '0') ratingClass = 'badge-danger';
+
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title truncate">${this.escapeHtml(establishment.business_name)}</div>
+                        <div class="card-subtitle">${establishment.business_type || '-'}</div>
+                    </div>
+                    <span class="badge ${ratingClass}">Rating: ${rating}</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-row">
+                        <span class="card-label">Address</span>
+                        <span class="card-value truncate">${this.escapeHtml(establishment.address_line_1 || '')} ${establishment.postcode || ''}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Hygiene</span>
+                        <span class="card-value">${establishment.hygiene_score ?? '-'}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Structural</span>
+                        <span class="card-value">${establishment.structural_score ?? '-'}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Inspected</span>
+                        <span class="card-value">${this.formatDate(establishment.rating_date)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderCQC(locations) {
+        if (!locations.length) {
+            this.cqcContainer.innerHTML = this.emptyState('No CQC registered providers found');
+            return;
+        }
+
+        const html = `
+            <div class="card-grid">
+                ${locations.map(l => this.cqcCard(l)).join('')}
+            </div>
+        `;
+        this.cqcContainer.innerHTML = html;
+    }
+
+    cqcCard(location) {
+        const rating = location.overall_rating || 'Not rated';
+        let ratingClass = 'badge-info';
+        if (rating === 'Outstanding') ratingClass = 'badge-success';
+        else if (rating === 'Good') ratingClass = 'badge-success';
+        else if (rating === 'Requires improvement') ratingClass = 'badge-warning';
+        else if (rating === 'Inadequate') ratingClass = 'badge-danger';
+
+        return `
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <div class="card-title truncate">${this.escapeHtml(location.name)}</div>
+                        <div class="card-subtitle">${location.location_type || '-'}</div>
+                    </div>
+                    <span class="badge ${ratingClass}">${rating}</span>
+                </div>
+                <div class="card-body">
+                    <div class="card-row">
+                        <span class="card-label">Provider</span>
+                        <span class="card-value truncate">${this.escapeHtml(location.provider_name) || '-'}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="card-label">Address</span>
+                        <span class="card-value truncate">${this.escapeHtml(location.town || '')} ${location.postcode || ''}</span>
+                    </div>
+                    ${location.number_of_beds ? `
+                    <div class="card-row">
+                        <span class="card-label">Beds</span>
+                        <span class="card-value">${location.number_of_beds}</span>
+                    </div>
+                    ` : ''}
+                    <div class="card-row">
+                        <span class="card-label">Inspected</span>
+                        <span class="card-value">${this.formatDate(location.report_date)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     renderVehicles(vehicles) {
@@ -639,7 +966,7 @@ class OSINTApp {
                 <div class="correlation-detail">
                     <div class="correlation-link">
                         <span class="badge badge-info">${correlation.source_type}</span>
-                        →
+                        ->
                         <span class="badge badge-info">${correlation.target_type}</span>
                         <span class="text-muted">(${correlation.link_type})</span>
                     </div>
@@ -752,7 +1079,7 @@ class OSINTApp {
             <div class="modal">
                 <div class="modal-header">
                     <h2>${this.escapeHtml(company.company_name)}</h2>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">x</button>
                 </div>
                 <div class="modal-body">
                     <h3>Company Details</h3>
@@ -786,64 +1113,6 @@ class OSINTApp {
                 </div>
             </div>
         `;
-
-        // Add modal styles if not present
-        if (!document.getElementById('modal-styles')) {
-            const style = document.createElement('style');
-            style.id = 'modal-styles';
-            style.textContent = `
-                .modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0,0,0,0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 1000;
-                }
-                .modal {
-                    background: white;
-                    border-radius: 12px;
-                    max-width: 600px;
-                    max-height: 80vh;
-                    overflow-y: auto;
-                    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-                }
-                .modal-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 1.5rem;
-                    border-bottom: 1px solid var(--border-color);
-                }
-                .modal-header h2 {
-                    font-size: 1.25rem;
-                    color: var(--primary-color);
-                }
-                .modal-close {
-                    background: none;
-                    border: none;
-                    font-size: 1.5rem;
-                    cursor: pointer;
-                    color: var(--text-muted);
-                }
-                .modal-body {
-                    padding: 1.5rem;
-                }
-                .modal-body h3 {
-                    margin-top: 1.5rem;
-                    margin-bottom: 0.5rem;
-                    color: var(--primary-color);
-                }
-                .modal-body ul {
-                    padding-left: 1.5rem;
-                }
-            `;
-            document.head.appendChild(style);
-        }
 
         document.body.appendChild(modal);
         modal.addEventListener('click', (e) => {
